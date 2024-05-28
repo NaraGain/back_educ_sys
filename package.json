@@ -7,25 +7,35 @@
     "build": "tsc --project ./",
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon src/app.ts",
+    "client" : "cd client && npm run start",
+    "dev": "concurrently \"npm run client\" \"nodemon src/app.ts\"",
     "prod": "nodemon dist/app.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@types/bcrypt": "^5.0.2",
+    "@types/multer": "^1.4.11",
     "bcrypt": "^5.1.1",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.9.2"
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.9.2",
+    "nodemailer": "^6.9.13",
+    "sequelize": "^6.37.3",
+    "sharp": "^0.33.3",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/node": "^20.11.19",
+    "@types/nodemailer": "^6.4.15",
+    "@types/uuid": "^9.0.8",
     "typescript": "^5.3.3"
   }
 }

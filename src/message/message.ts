@@ -1,6 +1,6 @@
 
 
-interface message {
+interface messageProps {
     message? : string,
     success? : Boolean,
     data? : String,
@@ -8,7 +8,7 @@ interface message {
 }
 
 
-export const message = async (message : message) =>{
+export const message:messageProps = async (message , success , data , error) =>{
     return {
         message : message.message,
         success : message.success,

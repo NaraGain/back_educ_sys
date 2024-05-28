@@ -1,217 +1,420 @@
 import { Request ,Response } from "express";
-import userModel from "../model/user";
-import { connection } from "../connection";
-import { randomUUID } from "crypto";
+import userModel, { IuserAttributes, userInstance } from "../model/user";
+import { v4 as uuidv4 } from 'uuid';
 import userRepositories from "../repositories/userRepositories";
 import bcrypt from "bcrypt"
 import jwt from 'jsonwebtoken'
 import dotenv from "dotenv"
+import  { userInfoInstance } from "../model/userInfo";
 dotenv.config()
+import fs from 'fs'
+import { uploadFile } from "../model/uploadFile";
 
 
 
-export const createUser = async  (req: Request, res: Response) => {
-    try {
 
-        const user: userModel = req.body
-        const check_user = await userRepositories
-        .retrieveByType({Type: "username" , data: req.body.username})
-        if(check_user.length > 0){
-            return res.status(401).json({
-                message : "current username is have been exist.",
-                sucess : false
+class userContorller{
+
+    async create (req: Request, res: Response) {
+        try {
+    
+            const user:IuserAttributes = req.body
+            const checkExistUser = await userInstance.
+            findOne({where: { username : req.body.username}})
+
+            if(checkExistUser){
+                return res.status(401).json({
+                    message : "current username is have been exist.",
+                    sucess : false,
+                    result : checkExistUser.dataValues.username
+                })
+            }
+
+            //check user passowr confirm
+            if(user.password !== req.body.confirmPassword){
+                return res.status(400).json({
+                    message : "Password do not match",
+                    success : false,
+                })
+            }
+            const uuid:string = uuidv4()
+            user.userid = uuid
+            user.isActive = true
+            const salt = await bcrypt.genSalt(10)
+            const hashpassword = await bcrypt.hash(req.body.password, salt)
+            user.password = hashpassword
+             //insert user into db
+            const create_user = await userInstance.create(user)
+            await create_user.save()
+            if(!create_user){
+                return res.status(404).json({
+                    message : "could create new user",
+                    success: false
+                })
+            }
+            // new user profile_url
+            const infoid:string = uuidv4()
+            const userProfile = await userInfoInstance.create({
+                infoid : infoid as string,
+                userid : user.userid,
+                profile_url : `https://ui-avatars.com/api/?name=${user.username})}&background=random`
             })
-        }
-        if(user.password !== user.confirmPassword){
-            return res.status(400).json({
-                message : "Password do not match",
-                success : false,
-            })
-        }
-        user.userid = randomUUID()
-        const salt = await bcrypt.genSalt(10)
-        const hashpassword = await bcrypt.hash(req.body.password, salt)
-        user.password = hashpassword
-        //insert user into db
-        const create_user = await userRepositories.createUser(user)
-        if(!create_user){
-            return res.status(401).json({
-                message : "could create new user",
-                success: false
-            })
-        }
-        res.status(200).json({
-            message : "register successfully",
-            success : true,
-        })     
-    } catch (error) {
-        res.status(500).json({
-            message: "error internal server",
-            success : false,
-            error : error
-        })
-    }
-}   
-
-
-export const loginUser = async (req:Request , res:Response) =>{
-    // try {
-        const {identifier }= req.body
-        const query = identifier.includes('@') ?
-         await userRepositories.retrieveByType({Type : 'email' , data:identifier})
-         : await userRepositories.retrieveByType({Type : 'username' , data:identifier}) 
+            await userProfile.save()
+            if(!userProfile){
+                return res.status(401).json({
+                    message : "error",
+                    success : false
+                })
+            }
         
+            res.status(200).json({
+                message : "register successfully",
+                success : true,
+            })     
+        } catch (error) {
+            res.status(500).json({
+                message: "error internal server",
+                success : false,
+                error : error
+            })
+        }
+    }  
 
-        if(query.length === 0){
-            return res.status(401).json({
-                message : "not found users",
-                success : false
+    async changeProfile (req:Request ,res:Response) {
+        try {
+            if(!req.file){
+                return res.status(404).json({
+                    message : "error no file request",
+                    sucess : false
+                })
+            }
+            const filename = req.file.filename
+            const changeUserProfile =  await userInfoInstance.update({
+                    profile_url : `/uploads/${filename}`
+            }, {
+             where : {userid : req.body.userid}
+            }).catch((error)=> {
+                const profile_url = `public/uploads/${filename}`
+                fs.unlink(profile_url , (err)=> {
+                    console.log(err)
+                })
+            })
+
+            //remove old file linke
+            fs.unlink(`public${req.body.url}` , (error)=> {
+                console.log(`can't remove old file ${req.body.url}`, error)
+            })
+
+            if(!changeUserProfile) {
+                return res.status(401).json({
+                    message : `error`,
+                    success : false,
+                })
+            }
+           
+            res.status(200).json({
+                message : "successfully upload",
+                sucess : true,
+            })
+        } catch (error) {
+            res.status(500).json({
+                message: "error internal server",
+                success : false,
+                error : new Error()
+            })
+        }
+    }
+    
+    async login (req:Request , res:Response){
+        try {
+            const { identifier,password }= req.body
+
+            if(identifier.length === 0){
+                return res.status(401).json({
+                    message : "input is empty",
+                    success : false,
+                    result : identifier,
+                })
+            }
+            const query = identifier.includes('@') ?
+             await userInstance.findOne({where : {email : identifier}})
+             : await userInstance.findOne({where : {username : identifier}}) 
+            
+            if(!query){
+                return res.status(401).json({
+                    message : "not found users",
+                    success : false
+                })
+            }
+           
+           
+            const vailPassword = await bcrypt.compare(
+                  password
+                 ,query.dataValues.password as string
+                 )
+            
+            if (!vailPassword){
+                return res.status(401).json({
+                    message : "invaild user credentails",
+                    success : false,
+                })
+            }
+    
+            const token = jwt.sign({
+                userId : query.dataValues.userid ,
+                name : query.dataValues.username,
+            }, `${process.env.JWT_SCRECT_KEY}` , {
+                expiresIn : '1d'
+            })
+    
+            res.status(200).json({
+                message : "user login successfully",
+                success: true,
+                userId : query.dataValues.userid,
+                username : identifier,
+                token: token,
+                
+            })
+            
+    
+        } catch (error) {
+            res.status(500).json({
+                message: "error internal server",
+                success : false,
+                error : new Error()
+            })
+        }
+    }
+
+
+    async findAll (req:Request ,res:Response)  {
+        try {
+            let usernames = typeof req.query.username === "string" ? req.query.username: "";
+            const findAllUser = await userRepositories.retrieveAll()
+    
+    
+            if(!findAllUser){
+                return res.status(401).json({
+                    message: "error response",
+                    succuss : false,
+                })
+            }
+            return res.status(200).json({
+                message : "get all user sucessfully",
+                success : true,
+                result : findAllUser,
+            })     
+        } catch (error) {
+            res.status(500).json({
+                message : "error internal server",
+                succuess : false,
+                error : error,
             })
         }
        
-        const user = query[0]
-        const vailPassword = await bcrypt.compare(
-            req.body.password
-             ,user.password
-             )
+    }
+
+    async findOne (req:Request , res:Response){
+        try {
+            
         
-        if (!vailPassword){
-            return res.status(401).json({
-                message : "invaild user credentails",
-                success : false,
+            const userProfile = await 
+            userInstance.findOne(
+                {where :  req.body.userId ? 
+                        {userid : req.body.userId} 
+                        : {username : req.body.username},
+                include : [{
+                    model : userInfoInstance,
+                    attributes : ["infoid", "profile_url", "bio"]
+                }],
+                attributes : ["userid" ,"firstname", "lastname", "username","email"]
+            }    
+            )
+            if(!userProfile){
+                return res.status(204).json({
+                    message: "error response",
+                    succuss : false,
+                })
+            }
+            
+            res.status(200).json({
+                message : `sucessfully ${userProfile?.dataValues.username}`,
+                success : true,
+                result : userProfile,
+            })
+    
+        } catch (error) {
+            res.status(500).json({
+                message : "error internal server",
+                succuess : false,
+                error : error,
             })
         }
+    }
 
-        const token = jwt.sign({
-            userId : user.userId ,
-            name : user.username,
-        }, `${process.env.JWT_SCRECT_KEY}` , {
-            expiresIn : '1d'
-        })
+    async findUserFile (req:Request , res:Response){
+        try {
+            const findUser = await userRepositories.retrieveByQuery({username : req.body.username})
+            const userid = findUser[0]?.userid
+            const userFile = await userRepositories.queryUserFile({userid : userid as string})
+            if(userFile.length === 0) {
+                return res.status(401).json({
+                    message : "no file found",
+                    suceess : false
+                })
+            }
 
-        res.status(200).json({
-            message : "user login successfully",
-            success: true,
-            username : identifier,
-            token : token
-        })
+            res.status(200).json({
+                message : "sucessfully to query user file",
+                sucess : true,
+                result : userFile,
+            })
+
+
+
+        } catch (error) {
+            res.status(500).json({
+                message : "error internal server",
+                succuess : false,
+                error : error,
+            })
+        }
+    }
+    
+    async userDescript(req:Request , res:Response){
+        try {
+            
+                const updateUserInfo = await userInfoInstance.update(
+                    { bio: req.body.bio },
+                    {
+                      where: {
+                        infoid: req.body.infoId,
+                      },
+                    },
+                  )
+
+                  if(!updateUserInfo){
+                        return res.status(401).json({
+                            message : "error to update",
+                            success : false
+                        })
+                  }
+            
+
+            res.status(200).json({
+                message : "successfully response for user info",
+                success : true
+            })
+
+        } catch (error) {
+            
+        }
+    }
+
+    async update (req:Request, res:Response) {
+        try {
+            const new_data:userModel = req.body
+            // const salt = await bcrypt.genSalt(10)
+            // const hashpassword = await bcrypt.hash(req.body.password, salt)
+            // new_data.password = hashpassword
+            const updateUser = await userRepositories.update(new_data)
+          
+            if(updateUser.changedRows === 0){
+                return res.status(401).json({
+                    message: `cannot update user with
+                     id ${new_data.userid}, maybe something error`,
+                    succuss : false,
+                    info : updateUser.info,
+                    error : updateUser.changedRows
+                })
+            }
+    
+            res.status(200).json({
+                message : ` update sucessfully 
+                users with id = ${new_data.userid}`,
+                success : true,
+                result : new_data,
+            })
+        } catch (error) {
+            res.status(500).json({
+                message : "error internal server",
+                succuess : false,
+                error : error,
+            })
+        }
+    }
+
+    async delete (req:Request , res:Response){
+        try {
+            const userId:string = req.params.userid
+             
+            const deleteUser = await userRepositories.delete(userId)
         
+            if(!deleteUser){
+                return res.status(401).json({
+                    message: "error response",
+                    succuss : false,
+                })
+            }
+            res.status(200).json({
+                message : " user delete sucessfully",
+                success : true,
+                result : deleteUser,
+            })
+        
+        } catch (error) {
+            res.status(500).json({
+                message : "error internal server",
+                succuess : false,
+                error : error,
+            })
+        }
+      
+    }
 
-    // } catch (error) {
-    //     res.status(500).json({
-    //         message: "error internal server",
-    //         success : false,
-    //         error : new Error()
-    //     })
-    // }
+
+    async deleteAll (req:Request ,res:Response){
+        try {
+            const num = await userRepositories.deleteAll();
+            if(num !==1){
+                return res.status(401).json({
+                    message : `could't delete all users ${num}`,
+                    success : false
+                })
+            }
+
+            res.status(200).json({
+                message : `${num} Delete all user successfully`,
+                success : true,
+            })
+
+        } catch (error) {
+            res.status(500).json({
+                message : "error internal server",
+                succuess : false,
+                error : error,
+            })
+        }
+    }
+
+
+    
+
 }
 
-export const getUser = async (req:Request ,res:Response) => {
-    try {
-        let usernames = typeof req.query.username === "string" ? req.query.username: "";
-        const findAllUser = await userRepositories.retrieveAll()
 
 
-        if(!findAllUser){
-            return res.status(401).json({
-                message: "error response",
-                succuss : false,
-            })
-        }
-        return res.status(200).json({
-            message : "get all user sucessfully",
-            success : true,
-            result : findAllUser,
-        })     
-    } catch (error) {
-        res.status(500).json({
-            message : "error internal server",
-            succuess : false,
-            error : error,
-        })
-    }
+
+export default userContorller
+
    
-}
 
 
-export const getUserByType = async (req:Request , res:Response)=>{
-    try {
-        const userByType = await userRepositories.retrieveByType({Type: req.body.type , data:req.body.data})
 
-        if(!userByType){
-            return res.status(401).json({
-                message: "error response",
-                succuss : false,
-            })
-        }
-        
-        res.status(200).json({
-            message : "get all user sucessfully",
-            success : true,
-            result : userByType,
-        })
 
-    } catch (error) {
-        res.status(500).json({
-            message : "error internal server",
-            succuess : false,
-            error : error,
-        })
-    }
-}
 
-export const updateUser = async (req:Request, res:Response) =>{
-    try {
-        const userId = req.params.user_id
-        const new_data = req.body
-        const updateUser = await connection.query('UPDATE users SET ? WHERE user_id = ?', [new_data])
 
-        if(!updateUser){
-            return res.status(401).json({
-                message: "error response",
-                succuss : false,
-            })
-        }
 
-        res.status(200).json({
-            message : " user update sucessfully",
-            success : true,
-            result : updateUser,
-        })
-    } catch (error) {
-        res.status(500).json({
-            message : "error internal server",
-            succuess : false,
-            error : error,
-        })
-    }
-}
 
-export const deleteUser = async (req:Request , res:Response)=>{
 
-    try {
-        const userId = req.params.user_id
 
-        const deleteUser = await connection.query(`DELETE FROM users WHERE user_id = ?`, [userId])
-    
-        if(!deleteUser){
-            return res.status(401).json({
-                message: "error response",
-                succuss : false,
-            })
-        }
-        res.status(200).json({
-            message : " user delete sucessfully",
-            success : true,
-            result : updateUser,
-        })
-    
-    } catch (error) {
-        res.status(500).json({
-            message : "error internal server",
-            succuess : false,
-            error : error,
-        })
-    }
-  
-}
