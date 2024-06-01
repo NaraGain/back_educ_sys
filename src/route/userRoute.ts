@@ -44,7 +44,7 @@ route.post('/changeProfile', upload.single('profile'), userInstants.changeProfil
 route.post('/login', userInstants.login)
 route.post('/profiles', userInstants.findOne)
 route.post('/update' ,userInstants.update)
-route.post('/userInfo', userInstants.userDescript)
+route.post('/userInfo', userInstants.userDescription)
 route.post('/userFile', userInstants.findUserFile)
 route.delete('/:userid', userInstants.delete)
 export default route

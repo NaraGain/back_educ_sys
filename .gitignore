@@ -1,7 +1,9 @@
 /node_modules
 /.env
 
+/public/uploads
+
+# client file
 /client/node_modules
 /client/.env
-
-/public/uploads
+/client/build

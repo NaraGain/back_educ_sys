@@ -216,8 +216,6 @@ class userContorller{
 
     async findOne (req:Request , res:Response){
         try {
-            
-        
             const userProfile = await 
             userInstance.findOne(
                 {where :  req.body.userId ? 
@@ -254,9 +252,9 @@ class userContorller{
 
     async findUserFile (req:Request , res:Response){
         try {
-            const findUser = await userRepositories.retrieveByQuery({username : req.body.username})
-            const userid = findUser[0]?.userid
-            const userFile = await userRepositories.queryUserFile({userid : userid as string})
+            // const findUser = await userRepositories.retrieveByQuery({username : req.body.username})
+            // const userid = findUser[0]?.userid
+            const userFile = await userRepositories.queryUserFile({userid : req.body.userid})
             if(userFile.length === 0) {
                 return res.status(401).json({
                     message : "no file found",
@@ -281,7 +279,7 @@ class userContorller{
         }
     }
     
-    async userDescript(req:Request , res:Response){
+    async userDescription(req:Request , res:Response){
         try {
             
                 const updateUserInfo = await userInfoInstance.update(
