@@ -9,7 +9,8 @@ import  { userInfoInstance } from "../model/userInfo";
 dotenv.config()
 import fs from 'fs'
 import { uploadFile } from "../model/uploadFile";
-
+import { PostInstance } from "../model/post";
+import { Op } from "sequelize";
 
 
 
@@ -186,6 +187,43 @@ class userContorller{
         }
     }
 
+    async searchAllUser (req:Request, res:Response) {
+        // try {
+            
+            const users = await userInstance.findAll({
+                attributes: ['userid','username','firstname', 'lastname', 'email'],
+                where : {
+                    username : {
+                        [Op.like] : `%${req.query.search}%`
+                    }
+                },
+                include : [{
+                    model : userInfoInstance,
+                    attributes : ['infoid', 'profile_url']
+                }]
+            })
+
+            if(!users.length){
+                return res.status(204).json({
+                    message : "non file user",
+                    success : false,
+                })
+            }
+
+            res.status(200).json({
+                message : "user found",
+                success : true,
+                result : users,
+            })
+
+        // } catch (error) {
+        //     res.status(500).json({
+        //         message: "error internal server",
+        //         success : false,
+        //         error : new Error()
+        //     })
+        // }
+    }
 
     async findAll (req:Request ,res:Response)  {
         try {
@@ -252,8 +290,19 @@ class userContorller{
 
     async findUserFile (req:Request , res:Response){
         try {
-            // const findUser = await userRepositories.retrieveByQuery({username : req.body.username})
-            // const userid = findUser[0]?.userid
+
+            const file = await userInstance.findAll(
+                {where : {userid : req.body.userid},
+                attributes : ['userid'],
+                include : [{
+                    model : PostInstance,
+                    attributes : ['postid'],
+                    include : [{
+                        model : uploadFile
+                    }]
+                }],
+            })
+
             const userFile = await userRepositories.queryUserFile({userid : req.body.userid})
             if(userFile.length === 0) {
                 return res.status(401).json({
@@ -266,6 +315,7 @@ class userContorller{
                 message : "sucessfully to query user file",
                 sucess : true,
                 result : userFile,
+                test : file,
             })
 
 

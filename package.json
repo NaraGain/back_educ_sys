@@ -7,7 +7,7 @@
     "build": "tsc --project ./",
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon src/app.ts",
-    "client" : "cd client && npm run start",
+    "client": "cd client && npm run start",
     "dev": "concurrently \"npm run client\" \"nodemon src/app.ts\"",
     "prod": "nodemon dist/app.js"
   },
@@ -27,6 +27,7 @@
     "nodemailer": "^6.9.13",
     "sequelize": "^6.37.3",
     "sharp": "^0.33.3",
+    "socket.io": "^4.7.5",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
