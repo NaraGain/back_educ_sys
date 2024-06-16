@@ -114,7 +114,7 @@ class friendController {
         try {
             const findUserFollowing = await FriendInstance.findAll({
                 where : {userid1 : req.body.userid},
-                attributes : ['userid2', 'requested_at', 'accepted_at'],
+                attributes : ['userid2', 'requested_at', 'accepted_at', 'status'],
                 include: [{
                     model : userInstance,
                     as: "Receiver",
@@ -128,7 +128,7 @@ class friendController {
 
             const findUserFollower = await FriendInstance.findAll({
                 where:{userid2 : req.body.userid},
-                attributes : ['userid2','userid1', 'requested_at', 'accepted_at'],
+                attributes : ['userid2','userid1', 'requested_at', 'accepted_at', 'status'],
                 include: [{
                     model : userInstance,
                     attributes : ["username", "userid"],

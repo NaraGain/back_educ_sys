@@ -5,6 +5,7 @@ import { userInfoInstance } from "./userInfo";
 import { PostInstance } from "./post";
 import { CommentInstance } from "./comments";
 import { FriendInstance } from "./friend";
+import { conversationInstance } from "./coversation";
 
 export default interface userModel extends RowDataPacket {
     userid?: string ,
@@ -127,6 +128,8 @@ userInstance.hasMany(FriendInstance ,{
     as: 'FriendshipsReceived'
    
 })
+
+
 
 CommentInstance.belongsTo(userInstance, {
     foreignKey : "userid",
