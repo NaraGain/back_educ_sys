@@ -1,8 +1,10 @@
 import { NextFunction, Request,Response } from "express"
-import { FriendInstance } from "../model/friend"
+import { FriendInstance, FriendStatus } from "../model/friend"
 import { userInstance } from "../model/user"
 import { userInfoInstance } from "../model/userInfo"
 import { Op } from "sequelize"
+import { participantInstance } from "../model/participants"
+import { conversationInstance } from "../model/conversation"
 
 
 
@@ -117,6 +119,17 @@ class friendController {
                     ]
                 }
             })
+
+            const checkUserFriend = await FriendInstance.findOne({
+                where : {
+                    [Op.and] : [
+                        {userid1 : req.body.userid1},
+                        {userid2 : req.body.currentUser},
+                        {status : "friend"}
+                    
+                    ]
+                }
+            })
             
             res.status(200).json({
                 message : "found following users",
@@ -128,7 +141,8 @@ class friendController {
                    
                 },
                 checkFollowing: checkUserFollowing ? true : false,
-                checkFollower : checkUserFollower ? true : false
+                checkFollower : checkUserFollower ? true : false,
+                checkFriend : checkUserFriend ? true : false,
             })
 
         } catch (error) {
@@ -156,6 +170,7 @@ class friendController {
                 }]
             })
 
+
             const findUserFollower = await FriendInstance.findAll({
                 where:{userid2 : req.body.userid},
                 attributes : ['userid1', 'requested_at', 'accepted_at', 'status'],
@@ -172,6 +187,8 @@ class friendController {
                 }]
             })
 
+
+         
              if(findUserFollowing == null || findUserFollower == null){
                 return res.status(204).json({
                     message : "There is no content to send for this request",
@@ -185,8 +202,118 @@ class friendController {
                 result : {
                     following : findUserFollowing,
                     follower : findUserFollower,
+                  
                 }
              })
+
+        } catch (error) {
+            res.status(500).json({
+                message: "error internal server",
+                success : false,
+                error : error
+            })
+        }
+    }
+
+    async acceptFriend (req:Request, res:Response){
+        try {
+            const accpted = await FriendInstance.update({
+                status : FriendStatus.friend,
+            },{
+                where : {[Op.and]: [
+                    {userid2 : req.body.receiverId} , 
+                    {userid1 : req.body.requesterId}
+                ]}
+            })
+
+            if(!accpted){
+                return res.status(204).json({
+                    message: "accepted Error",
+                    success : false
+                })
+            }
+
+            res.status(200).json({
+                message : 'successfully accepted friend',
+                success : true,
+            })
+
+        } catch (error) {
+            res.status(500).json({
+                message: "error internal server",
+                success : false,
+                error : error
+            })
+        }
+    }
+
+    async userContact (req:Request, res:Response){
+        try {
+            const findUserFollowing = await FriendInstance.findAll({
+                where : {userid1 : req.body.userid},
+                include: [{
+                    model : userInstance,
+                    as: "Receiver" 
+                }]
+            })
+
+            const findUserFollower = await FriendInstance.findAll({
+                where:{userid2 : req.body.userid},
+                include: [{
+                    model : userInstance,
+                    required : true,
+                    as : "Initiator",
+                }]
+            })
+
+            const type = findUserFollowing.length && 'Receiver' 
+            || findUserFollower.length && 'Initiator'
+
+           if(!type) {
+            return res.status(404).json({
+                message : 'unmatch input data',
+                success : false,
+            })
+        }
+        const findFriend = await FriendInstance.findAll({
+            where : {[Op.or]: [
+                { userid1 : req.body.userid,},
+                { userid2 : req.body.userid,},
+        ], [Op.and] : [{
+            status : 'friend'
+        }]                   
+            },
+            include : [{
+                as :  type as string,
+                model : userInstance,
+                attributes : ['username','userid'],
+                required:true,
+                include : [{
+                    model : userInfoInstance,
+                    required : true,
+                    attributes : ['infoid', 'profile_url']
+                },
+                {
+                    model: participantInstance,
+                    include : [{
+                        model : conversationInstance
+                    }]
+                },
+                
+            
+            ]
+            },
+        ]
+        
+        })
+
+
+        res.status(200).json({
+            message : 'response sucessfully',
+            success : true,
+            result: findFriend
+        })
+
 
         } catch (error) {
             res.status(500).json({

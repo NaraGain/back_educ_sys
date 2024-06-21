@@ -1,54 +1,49 @@
-import { Model, DataTypes, TEXT } from 'sequelize';
-import { sequelize } from '../connection';
+import { DataTypes, Model } from "sequelize";
+import { sequelize } from "../connection";
 
-
-interface IMessage {
-    messageId : string,
-    from_userId : string,
-    to_userId : string,
-    content : string,
-
+export interface IMessage {
+    messageId: string,
+    conversationId: string,
+    senderId: string,
+    content: string,
+    created_at?: Date,
+    updated_at?: Date
 }
 
 
-class Message extends Model {
-  public id!: number;
-  public userId!: number;
-  public groupId!: number;
-  public content!: string;
-}
 
-Message.init({
-  messageId: {
-    type: DataTypes.STRING(36),
-    autoIncrement: true,
-    primaryKey: true,
-  },
-  userId : {
-    type : DataTypes.STRING(36),
-    allowNull : false
-  },
-  from_number: {
-    type: DataTypes.STRING(36),
-    allowNull: false,
-  },
-  to_number: {
-    type: DataTypes.STRING(36),
-    allowNull: false,
-  },
-  content: {
-    type: TEXT,
-    allowNull: false,
-  },
-}, {
-  sequelize,
-  tableName: 'messages',
-});
+export  class messageInstance extends Model<IMessage>{}
+
+messageInstance.init({
+    messageId: {
+        type: DataTypes.STRING(36),
+        allowNull: true,
+        primaryKey: true
+    },
+    conversationId:{
+        type: DataTypes.STRING(36),
+        allowNull: false
+    },
+    senderId:{
+        type: DataTypes.STRING(36),
+        allowNull: false
+    },
+    content:{
+        type: DataTypes.STRING(256),
+    },
+    created_at:{
+    type: 'TIMESTAMP',
+    defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
+    allowNull: false
+    },
+    updated_at:{
+    type: 'TIMESTAMP',
+    }
+}, {sequelize , tableName:'message', timestamps:false})
 
 
-sequelize.sync()
-.then((result)=>{
-    console.log(`friends executing mysql schema`)})
-.catch(error=> console.log(`ìn friends modole`, error))
-
-export default Message;
+sequelize.sync({alter : false}).then((result)=> {
+    console.log(`executing mysql schema`)
+}).catch((error)=> {
+    console.log("in task Model" ,error)
+})

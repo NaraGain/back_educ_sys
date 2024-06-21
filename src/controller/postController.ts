@@ -180,8 +180,7 @@ export const publicPost = async(req:Request ,res:Response) => {
         const limit = parseInt(req.query.limit as string , 4) || 4
         const offset = (page - 1) * limit
         
-        console.log(req.query)
-        console.log(offset)
+        
 
           const allpost = await PostInstance
           .findAll({order :[['created_at', 'DESC']] 

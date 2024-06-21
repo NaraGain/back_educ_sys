@@ -34,8 +34,10 @@ export const sequelize = new Sequelize(
     `${process.env.MYSQL_USER}`,
     `${process.env.MYSQL_PASSWORD}`,
     {
+    logging : false,
     host : process.env.MYSQL_HOSTNAME,
-    dialect: 'mysql'
+    dialect: 'mysql',
+    
     })
 
 
