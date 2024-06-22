@@ -1,4 +1,4 @@
-import { Request,Response } from "express"
+import { NextFunction, Request,Response } from "express"
 import { FriendInstance } from "../model/friend"
 import { userInstance } from "../model/user"
 import { userInfoInstance } from "../model/userInfo"
@@ -35,9 +35,38 @@ class friendController {
         }
     }
 
-    async unFriend (req:Request , res:Response) {
+    async removeFriend (req:Request , res:Response) {
         try {
-            // const unFriend = await FriendInstance.update
+
+            if(req.body.type === "Receiver"){
+                //follower user remove
+                // console.log(req.body)
+                 await FriendInstance.destroy({where 
+                    :{[Op.and]:
+                    [
+                        {userid1 :req.body.Receiver},
+                        {userid2 : req.body.Initiator}
+                    ]}})
+                 res.status(200).json({
+                    message : "",
+                    success : true
+                })
+
+            }else if(req.body.type === "Initiator"){
+                //following user unfollowing
+                await FriendInstance.destroy({where :{ [Op.and]:[
+                    {userid1 : req.body.Initiator },
+                {
+                    userid2 : req.body.Receiver
+                }
+            ]}})
+                 res.status(200).json({
+                    message : "",
+                    success : true
+                })
+            }
+
+            
         } catch (error) {
             res.status(500).json({
                 message: "error internal server",
@@ -47,9 +76,10 @@ class friendController {
         }
     }
 
+  
+
     async countTotalFriend (req:Request , res:Response) {
         try {
-           
             if(req.body.userid1 == undefined) {
                 return res.status(204).json({
                     message : "There is no content to send for this request",
@@ -128,7 +158,11 @@ class friendController {
 
             const findUserFollower = await FriendInstance.findAll({
                 where:{userid2 : req.body.userid},
+<<<<<<< HEAD
                 attributes : ['userid2','userid1', 'requested_at', 'accepted_at', 'status'],
+=======
+                attributes : ['userid1', 'requested_at', 'accepted_at', 'status'],
+>>>>>>> 0022885aa160003608c72d08a88808a1d36e9ff7
                 include: [{
                     model : userInstance,
                     attributes : ["username", "userid"],

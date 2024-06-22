@@ -39,6 +39,7 @@ const upload = multer({
 })
 
 route.get('/', userInstants.findAll)
+route.get('/find', userInstants.searchAllUser)
 route.post('/', userInstants.create)
 route.post('/changeProfile', upload.single('profile'), userInstants.changeProfile)
 route.post('/login', userInstants.login)

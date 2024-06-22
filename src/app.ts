@@ -8,6 +8,8 @@ import friendRoute from "./route/friendRoute"
 import connectionString, { connection, sequelize, testConnection } from "./connection";
 import cors from "cors";
 import path from "path";
+import { Socket,Server } from "socket.io"
+import http from 'http'
 import { EventEmitter } from "stream"
 import bodyParser from "body-parser"
 import { v4 as uuidv4 } from "uuid"
@@ -15,13 +17,20 @@ import { TaskInstance } from "./model/task"
 import { userInfoInstance } from "./model/userInfo"
 import { userInstance } from "./model/user"
 import { PostInstance } from "./model/post"
+import Message from "./model/message"
+
 dotenv.config();
 
 
-
+const onlineUser = new Set()
 const app = express()
-
-
+const server = http.createServer(app)
+const io = new Server(server, {
+  cors : {
+    origin : 'http://localhost:3000',
+    methods : ['GET',"POST","UPDATE","DELETE"]
+  }
+})
 
 app.use(cors());
 //app.use(express.json())
@@ -31,78 +40,33 @@ app.use(express.static("./public/html"))
 app.use('/uploads', express.static("./public/uploads"))
 
 
+app.post('/message', async(req , res)=>{
+  const {content , userId , groupId} = req.body
+})
+
+io.on('connection', (socket)=> {
+  console.log("New Client connected", socket.id)
+
+  //
+  socket.on('sendMessage', async (messageData)=> {
+      const {userId , groupId , content} = messageData
+      console.log(messageData)
+      // const message = await Message.create({userId , groupId , content})
+      io.to(groupId.toString()).emit('receiveMessage', messageData)
+  });
+
+  //
+  socket.on("join", (grouId)=>{
+     socket.join(grouId.toString())
+  });
+
+  socket.on('discount', ()=>{
+    console.log('Client disconnected')
+  })
+
+})
 
 
-//sever-send-events 
-
-
-app.get('/status', (req:Request, res:Response) => {
-     res.json({clients: clients.length , clientsid 
-      : clients.map((client:clinetType)=> client.id)})
-}
-    );
-
-type clinetType = {
-    id : string | number,
-    res : Response,
-}
-
-type factsType = {
-    id : string | null ,
-    facts : string | undefined,
-}
-
-let clients:clinetType[] = [];
-let facts:factsType[] = [];
-
-
-// ...
-
-function eventsHandler(req:Request, res:Response, next:NextFunction) {
-    const headers = {
-      'Content-Type': 'text/event-stream',
-      'Connection': 'keep-alive',
-      'Cache-Control': 'no-cache'
-    };
-    res.writeHead(200, headers);
-  
-    const data = `data: ${JSON.stringify(facts)}\n\n`;
-  
-    res.write(data);
-  
-    const clientId = Date.now().toString();
-  
-    const newClient:clinetType = {
-      id: clientId as string,
-      res
-    };
-  
-    clients.push(newClient as clinetType);
-  
-    req.on('close', () => {
-      console.log(`${clientId} Connection closed`);
-      clients = clients.filter((client:clinetType) => client.id !== clientId);
-    });
-  }
-  
-  app.get('/events', eventsHandler);
-
-// ...
-
-function sendEventsToAll(newFact:factsType) {
-    clients.forEach(client => client.res.write(`data: ${JSON.stringify(newFact)}\n\n`))
-  }
-  
-  async function addFact(req:Request, res:Response, next:NextFunction) {
-    const newFact:factsType = req.body;
-    newFact.id = Date.now().toString()
-    
-    facts.push(newFact);
-    res.json(newFact)
-    return sendEventsToAll(newFact);
-  }
-
-  app.post('/fact', addFact);
 //route
 app.use(`/api/v1/user`, userRoute)
 app.use('/api/v1/post', postRoute)
@@ -121,7 +85,7 @@ const start = async () => {
     try {
         await testConnection()
         await connectionString()
-        app.listen(process.env.PORT ,()=>{
+        server.listen(process.env.PORT ,()=>{
             console.log(`server runing on PORT ${process.env.PORT}`)
         })
     } catch (error) {

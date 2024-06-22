@@ -180,6 +180,8 @@ export const publicPost = async(req:Request ,res:Response) => {
         const limit = parseInt(req.query.limit as string , 4) || 4
         const offset = (page - 1) * limit
         
+        console.log(req.query)
+        console.log(offset)
 
           const allpost = await PostInstance
           .findAll({order :[['created_at', 'DESC']] 
@@ -202,15 +204,18 @@ export const publicPost = async(req:Request ,res:Response) => {
           limit,
           offset
         })
-
+       
+       
        const totalPage = Math.ceil(allpost.length / limit)
+       console.log(`${totalPage} k: ${allpost.length}`)
 
             res.status(200).json({
                 message : "public post",
                 success : true,
                 result : allpost,
                 pagination:{
-                    currentPage : totalPage
+                    currentPage : totalPage / 1,
+                   
                 }
             })
             
