@@ -14,7 +14,7 @@ export interface IFriend {
 
 export class FriendInstance extends Model<IFriend> {}
 
-const FriendStatus = Object.freeze({
+export const FriendStatus = Object.freeze({
     friend: 'friend',
     following: 'following',
     follower : "follower",

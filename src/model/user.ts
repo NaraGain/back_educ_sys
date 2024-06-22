@@ -5,7 +5,9 @@ import { userInfoInstance } from "./userInfo";
 import { PostInstance } from "./post";
 import { CommentInstance } from "./comments";
 import { FriendInstance } from "./friend";
-import { conversationInstance } from "./coversation";
+import { messageInstance } from "./message";
+import { participantInstance } from "./participants";
+
 
 export default interface userModel extends RowDataPacket {
     userid?: string ,
@@ -54,6 +56,7 @@ userInstance.init({
     },
     username : {
       type :  DataTypes.STRING,
+      unique : true,
       allowNull : false,
     },
     email:{
@@ -77,7 +80,7 @@ userInstance.init({
         defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
         allowNull: false
       },
-      updated_at: {
+    updated_at: {
         type: 'TIMESTAMP',
         defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
         allowNull: false
@@ -104,6 +107,9 @@ userInstance.hasMany(PostInstance,
         onDelete : "CASCADE"
         
     })
+
+userInstance.hasMany(messageInstance , {foreignKey: 'senderId', onDelete: 'CASCADE'})
+userInstance.hasMany(participantInstance, {foreignKey: 'userId', onDelete: 'CASCADE'})
 
 PostInstance.belongsTo(userInstance , {
     foreignKey : "userid",
@@ -150,6 +156,8 @@ FriendInstance.belongsTo(userInstance , {
   
 })
 
+messageInstance.belongsTo(userInstance, {foreignKey: 'senderId'})
+participantInstance.belongsTo(userInstance, {foreignKey: 'userId'})
 //set alter to false if something change,
 sequelize.sync({alter : false}).then((result)=> {
     console.log(`executing mysql schema`)
