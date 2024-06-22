@@ -10,7 +10,7 @@ import messageRoute from "./route/messageRoute"
 import connectionString, { connection, sequelize, testConnection } from "./connection";
 import cors from "cors";
 import path from "path";
-import { Server } from "socket.io"
+import {Server} from 'socket.io'
 import http from 'http'
 import { EventEmitter } from "stream"
 import bodyParser from "body-parser"
@@ -47,7 +47,7 @@ app.post('/message', async(req , res)=>{
   const {content , userId , groupId} = req.body
 })
 
-io.on('connection', (socket)=> {
+io.on('connection', (socket:any)=> {
   console.log("New Client connected", socket.id)
 
   //
@@ -55,7 +55,7 @@ io.on('connection', (socket)=> {
       users.push({userId , socketId:socket.id})
       io.emit('users', users)
   });
-  socket.on('sendMessage', async (messageData)=> {
+  socket.on('sendMessage', async (messageData:any)=> {
       const {userId , groupId , content} = messageData
       const mid:string = uuidv4()
       const id = generateIdRandomId(18)
@@ -64,7 +64,7 @@ io.on('connection', (socket)=> {
   });
 
   //
-  socket.on("join", (grouId)=>{
+  socket.on("join", (grouId:string)=>{
      socket.join(grouId.toString())
   });
 

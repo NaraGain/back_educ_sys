@@ -173,11 +173,7 @@ class friendController {
 
             const findUserFollower = await FriendInstance.findAll({
                 where:{userid2 : req.body.userid},
-<<<<<<< HEAD
-                attributes : ['userid2','userid1', 'requested_at', 'accepted_at', 'status'],
-=======
                 attributes : ['userid1', 'requested_at', 'accepted_at', 'status'],
->>>>>>> 0022885aa160003608c72d08a88808a1d36e9ff7
                 include: [{
                     model : userInstance,
                     attributes : ["username", "userid"],
